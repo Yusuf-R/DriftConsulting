@@ -31,7 +31,7 @@ export default function Footer() {
                         <div className="flex items-center gap-2 mb-4">
                             <Building2 className="w-8 h-8 text-amber-500" />
                             <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                                GandeWest
+                                Drift Consulting
                             </h3>
                         </div>
                         <p className="text-slate-600 dark:text-slate-400 mb-6">
@@ -133,7 +133,7 @@ export default function Footer() {
                 <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                         <p className="text-sm text-slate-600 dark:text-slate-400 text-center sm:text-left">
-                            © {currentYear} GandeWest Construction Management. All rights reserved.
+                            © {currentYear} Drift Consulting. All rights reserved.
                         </p>
                         <div className="flex gap-6 text-sm">
                             <Link

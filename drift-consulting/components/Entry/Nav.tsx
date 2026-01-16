@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModeToggle } from '@/components/ModeToggle';
-import MobileNav from './MobileNav';
+import ThemeAwareLogo from '@/components/ThemeAwareLogo'; // Import the new component
 
 // Navigation items
 const items = [
@@ -18,56 +19,40 @@ const items = [
 ];
 
 interface NavProps {
-    logoSrc: string;
     brand: string;
+    // Remove logoSrc, we'll handle logos differently
 }
 
-interface BrandMarkProps {
-    logoSrc?: string;
-    size?: number;
-    alt?: string;
-}
-
-/* --- Default inline SVG logo (fallback) --- */
-function DefaultLogo(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg width="1em" height="1em" viewBox="0 0 324 323" fill="currentColor" aria-hidden="true" {...props}>
-            <rect x="88.1023" y="144.792" width="151.802" height="36.5788" rx="18.2894"
-                  transform="rotate(-38.5799 88.1023 144.792)" />
-            <rect x="85.3459" y="244.537" width="151.802" height="36.5788" rx="18.2894"
-                  transform="rotate(-38.5799 85.3459 244.537)" />
-        </svg>
-    );
-}
-
-function BrandMark({ logoSrc, size = 120, alt = 'Drift Consulting' }: BrandMarkProps) {
-    if (logoSrc) {
-        return (
-            <Image
-                src={logoSrc}
-                alt={alt}
-                width={size}
-                height={size}
-                priority
-                className="inline-block object-contain"
-            />
-        );
-    }
-    return <DefaultLogo style={{ width: size, height: size }} />;
-}
-
-export default function Nav({ logoSrc, brand }: NavProps) {
+export default function Nav({ brand }: NavProps) {
     const pathname = usePathname();
     const [scrolled, setScrolled] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Handle scroll effect
     useEffect(() => {
         const handleScroll = () => {
-            setScrolled(window.scrollY > 20);
+            setScrolled(window.scrollY > 10);
         };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    // Close mobile menu when route changes
+    useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [pathname]);
+
+    // Prevent body scroll when mobile menu is open
+    useEffect(() => {
+        if (mobileMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [mobileMenuOpen]);
 
     const isActive = (href: string) => {
         if (href === '/') {
@@ -77,72 +62,151 @@ export default function Nav({ logoSrc, brand }: NavProps) {
     };
 
     return (
-        <header
-            className={`sticky top-0 z-50 w-full border-b transition-all duration-300 ${
-                scrolled
-                    ? 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-md'
-                    : 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm'
-            }`}
-        >
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16 md:h-20">
-                    {/* Left: Brand */}
-                    <Link
-                        href="/"
-                        className="flex items-center gap-2 sm:gap-3 text-primary hover:opacity-80 transition-opacity no-underline group"
-                        aria-label="Go to home"
-                    >
-                        <span className="text-2xl leading-none transition-transform group-hover:scale-105">
-                            <BrandMark logoSrc={logoSrc} size={80} />
-                        </span>
-                        <span className="hidden sm:inline-block text-lg md:text-xl font-bold text-slate-900 dark:text-white">
-                            {brand}
-                        </span>
-                    </Link>
+        <>
+            <header
+                className={`sticky top-0 z-50 w-full border-b transition-all duration-300 ${
+                    scrolled
+                        ? 'bg-white/98 dark:bg-slate-900/98 shadow-sm'
+                        : 'bg-white dark:bg-slate-900'
+                }`}
+            >
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-16 lg:h-20">
 
-                    {/* Center: Desktop Navigation */}
-                    <nav className="hidden md:flex items-center gap-1 lg:gap-2">
-                        {items.map((item) => (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`relative px-3 lg:px-4 py-2 rounded-md text-sm lg:text-base font-medium transition-colors ${
-                                    isActive(item.href)
-                                        ? 'text-amber-600 dark:text-amber-400'
-                                        : 'text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400'
-                                }`}
-                            >
-                                {item.label}
-                                {isActive(item.href) && (
-                                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-full" />
-                                )}
-                            </Link>
-                        ))}
-                    </nav>
-
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        {/* CTA Button - Hidden on small mobile */}
-                        <Link href="/contact" className="hidden sm:block">
-                            <Button
-                                size="sm"
-                                className="bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-md hover:shadow-lg transition-all"
-                            >
-                                <span className="hidden lg:inline">Start Project</span>
-                                <span className="lg:hidden">Contact</span>
-                            </Button>
+                        {/* Logo & Brand - Using ThemeAwareLogo */}
+                        <Link
+                            href="/"
+                            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                            aria-label="Go to home"
+                        >
+                            <ThemeAwareLogo
+                                lightLogoSrc="/light_mode_drift-consulting.svg"
+                                darkLogoSrc="/dark_mode_drift-consulting.svg"
+                                alt={brand}
+                                width={70}
+                                height={70}
+                                className="w-14 h-14 lg:w-16 lg:h-16 object-contain"
+                            />
+                            <span className="text-sm sm:text-lg lg:text-xl font-bold text-slate-900 dark:text-white">
+                                {brand}
+                            </span>
                         </Link>
 
-                        {/* Theme Toggle - Desktop */}
-                        <div className="hidden md:block">
+                        {/* Desktop Navigation */}
+                        <nav className="hidden lg:flex items-center gap-1">
+                            {items.map((item) => (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={`relative px-4 py-2 text-[15px] font-medium transition-colors rounded-md ${
+                                        isActive(item.href)
+                                            ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30'
+                                            : 'text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                    }`}
+                                >
+                                    {item.label}
+                                </Link>
+                            ))}
+                        </nav>
+
+                        {/* Desktop Actions */}
+                        <div className="hidden lg:flex items-center gap-3">
                             <ModeToggle />
+                            <Link href="/contact">
+                                <Button className="bg-amber-500 hover:bg-amber-600 text-white font-semibold">
+                                    Start Project
+                                </Button>
+                            </Link>
                         </div>
 
-                        {/* Mobile Menu */}
-                        <MobileNav items={items} />
+                        {/* MOBILE: Right side - Theme Toggle + Menu Button */}
+                        <div className="lg:hidden flex items-center gap-2">
+                            {/* Theme Toggle - Visible on mobile */}
+                            <div className="mr-1">
+                                <ModeToggle />
+                            </div>
+
+                            {/* Mobile Menu Button */}
+                            <button
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                className="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                aria-label="Toggle menu"
+                            >
+                                {mobileMenuOpen ? (
+                                    <X className="w-6 h-6 text-slate-900 dark:text-white" />
+                                ) : (
+                                    <Menu className="w-6 h-6 text-slate-900 dark:text-white" />
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </header>
+            </header>
+
+            {/* Mobile Menu Overlay */}
+            <AnimatePresence>
+                {mobileMenuOpen && (
+                    <>
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+                            onClick={() => setMobileMenuOpen(false)}
+                        />
+
+                        {/* Mobile Menu Panel */}
+                        <motion.div
+                            initial={{ y: '-100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '-100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed top-16 left-0 right-0 bg-white dark:bg-slate-900 border-b shadow-xl z-40 lg:hidden max-h-[calc(100vh-4rem)] overflow-y-auto"
+                        >
+                            {/* Navigation Links */}
+                            <nav className="py-4">
+                                {items.map((item, index) => (
+                                    <motion.div
+                                        key={item.href}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                    >
+                                        <Link
+                                            href={item.href}
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className={`flex items-center justify-between px-6 py-4 text-base font-medium transition-colors border-l-4 ${
+                                                isActive(item.href)
+                                                    ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-500'
+                                                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border-transparent hover:border-slate-300 dark:hover:border-slate-700'
+                                            }`}
+                                        >
+                                            <span>{item.label}</span>
+                                            <ChevronRight className={`w-5 h-5 transition-transform ${
+                                                isActive(item.href) ? 'text-amber-500' : 'text-slate-400'
+                                            }`} />
+                                        </Link>
+                                    </motion.div>
+                                ))}
+                            </nav>
+
+                            {/* Mobile Actions */}
+                            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50">
+                                <Link
+                                    href="/contact"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                >
+                                    <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold h-12">
+                                        Start Your Project
+                                    </Button>
+                                </Link>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+        </>
     );
 }
