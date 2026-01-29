@@ -1,3 +1,4 @@
+// lib/validations/schemas.ts
 import { z } from 'zod';
 
 const PROJECT_TYPE = ['residential', 'hospitality', 'institutional', 'commercial', 'government'] as const;
@@ -9,13 +10,6 @@ export const contactFormSchema = z.object({
         .min(2, 'Name must be at least 2 characters')
         .max(100, 'Name cannot exceed 100 characters')
         .regex(/^[a-zA-Z\s'-]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes'),
-
-    // email: z
-    //     .string()
-    //     .min(1, 'Email is required')
-    //     .email('Please provide a valid email address')
-    //     .max(255, 'Email cannot exceed 255 characters'),
-
 
     email: z.email('Please provide a valid email address'),
 
@@ -63,14 +57,84 @@ export type ProjectFilterData = z.infer<typeof projectFilterSchema>;
 export const adminLoginSchema = z.object({
     email: z
         .string()
-        .email('Invalid email address'),
+        .min(1, 'Email is required')
+        .email('Please enter a valid email address')
+        .toLowerCase(),
 
     password: z
         .string()
-        .min(8, 'Password must be at least 8 characters'),
+        .min(1, 'Password is required')
+        .min(6, 'Password must be at least 6 characters'),
+
+    rememberMe: z.boolean().optional(),
 });
 
 export type AdminLoginData = z.infer<typeof adminLoginSchema>;
+
+// Admin Signup Schema
+export const adminSignupSchema = z.object({
+    name: z
+        .string()
+        .min(2, 'Name must be at least 2 characters')
+        .max(100, 'Name cannot exceed 100 characters')
+        .regex(/^[a-zA-Z\s'-]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes'),
+
+    email: z
+        .string()
+        .min(1, 'Email is required')
+        .email('Please enter a valid email address')
+        .toLowerCase(),
+
+    password: z
+        .string()
+        .min(6, 'Password must be at least 6 characters')
+        .max(100, 'Password cannot exceed 100 characters')
+        .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+        .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+        .regex(/[0-9]/, 'Password must contain at least one number'),
+
+    confirmPassword: z
+        .string()
+        .min(1, 'Please confirm your password'),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+});
+
+export type AdminSignupData = z.infer<typeof adminSignupSchema>;
+
+// Password Reset Request Schema
+export const passwordResetRequestSchema = z.object({
+    email: z
+        .string()
+        .min(1, 'Email is required')
+        .email('Please enter a valid email address')
+        .toLowerCase(),
+});
+
+export type PasswordResetRequestData = z.infer<typeof passwordResetRequestSchema>;
+
+// Password Reset Schema
+export const passwordResetSchema = z.object({
+    password: z
+        .string()
+        .min(6, 'Password must be at least 6 characters')
+        .max(100, 'Password cannot exceed 100 characters')
+        .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+        .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+        .regex(/[0-9]/, 'Password must contain at least one number'),
+
+    confirmPassword: z
+        .string()
+        .min(1, 'Please confirm your password'),
+
+    token: z.string().min(1, 'Reset token is required'),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+});
+
+export type PasswordResetData = z.infer<typeof passwordResetSchema>;
 
 // Contact Status Update Schema
 export const contactStatusSchema = z.object({

@@ -1,140 +1,190 @@
-import { NextRequest, NextResponse } from 'next/server';
-import dbClient from '@/lib/mongoDB/index';
-import Contact from '@/lib/models/Contact';
-import { contactFormSchema } from '@/lib/validations';
-import { sendContactNotification, sendClientConfirmation } from '@/lib/email';
+// app/api/v1/contact/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { contactFormSchema } from "@/lib/validations";
+import { auth } from "@/lib/auth/auth";
+import AuthController from "@/lib/controllers/AuthController";
+import { contactRateLimit, ipRateLimit, getClientIp } from "@/lib/rate-limit";
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
     try {
-        // Parse request body
-        const body = await request.json();
+        // Get client IP
+        const ip = getClientIp(req);
 
-        // Validate input
-        const validationResult = contactFormSchema.safeParse(body);
+        // Check rate limit by IP (10 per hour)
+        const { success: ipSuccess, limit: ipLimit, remaining: ipRemaining, reset: ipReset } =
+            await ipRateLimit.limit(ip);
 
-        if (!validationResult.success) {
+        if (!ipSuccess) {
+            const resetDate = new Date(ipReset);
             return NextResponse.json(
                 {
                     success: false,
-                    error: 'Validation failed',
-                    details: validationResult.error.flatten().fieldErrors,
+                    message: `Too many requests from your IP. Please try again at ${resetDate.toLocaleTimeString()}.`,
+                    error: "RATE_LIMIT_EXCEEDED",
+                    retryAfter: Math.ceil((ipReset - Date.now()) / 1000), // seconds until reset
+                },
+                {
+                    status: 429,
+                    headers: {
+                        "X-RateLimit-Limit": ipLimit.toString(),
+                        "X-RateLimit-Remaining": ipRemaining.toString(),
+                        "X-RateLimit-Reset": ipReset.toString(),
+                        "Retry-After": Math.ceil((ipReset - Date.now()) / 1000).toString(),
+                    }
+                }
+            );
+        }
+
+        // Get request body
+        const body = await req.json();
+
+        // Validate with Zod
+        const validatedData = contactFormSchema.parse(body);
+
+        // Check rate limit by email (5 per minute to prevent spam with same email)
+        const { success: emailSuccess, limit: emailLimit, remaining: emailRemaining, reset: emailReset } =
+            await contactRateLimit.limit(validatedData.email.toLowerCase());
+
+        if (!emailSuccess) {
+            const resetDate = new Date(emailReset);
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: `Too many submission attempts. Please wait before trying again.`,
+                    error: "RATE_LIMIT_EXCEEDED",
+                    retryAfter: Math.ceil((emailReset - Date.now()) / 1000),
+                },
+                {
+                    status: 429,
+                    headers: {
+                        "X-RateLimit-Limit": emailLimit.toString(),
+                        "X-RateLimit-Remaining": emailRemaining.toString(),
+                        "X-RateLimit-Reset": emailReset.toString(),
+                        "Retry-After": Math.ceil((emailReset - Date.now()) / 1000).toString(),
+                    }
+                }
+            );
+        }
+
+        // Get user agent
+        const userAgent = req.headers.get('user-agent') || 'unknown';
+
+        // Create contact using AuthController
+        const contact = await AuthController.createContact({
+            name: validatedData.name,
+            email: validatedData.email,
+            projectType: validatedData.projectType,
+            location: validatedData.location,
+            scope: validatedData.scope,
+            phone: validatedData.phone,
+            budget: validatedData.budget,
+            timeline: validatedData.timeline,
+            ipAddress: ip,
+            userAgent,
+        });
+
+        // TODO: Send notification email to admin
+        // await sendAdminNotification(contact);
+
+        // TODO: Send thank you email to client
+        // await sendClientConfirmation(contact);
+
+        return NextResponse.json(
+            {
+                success: true,
+                message: "Thank you for your inquiry! We'll get back to you soon.",
+                contactId: contact._id,
+            },
+            {
+                status: 201,
+                headers: {
+                    "X-RateLimit-Limit": ipLimit.toString(),
+                    "X-RateLimit-Remaining": ipRemaining.toString(),
+                }
+            }
+        );
+
+    } catch (error: any) {
+        console.error('Contact form error:', error);
+
+        // Handle Zod validation errors
+        if (error.name === 'ZodError') {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: 'Validation failed. Please check your input.',
+                    details: error.errors.map((err: any) => ({
+                        field: err.path.join('.'),
+                        message: err.message,
+                    })),
                 },
                 { status: 400 }
             );
         }
 
-        const data = validationResult.data;
+        // Handle duplicate email (if you add unique constraint)
+        if (error.code === 11000) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: 'A contact with this email already exists. We will review your previous inquiry.',
+                },
+                { status: 409 }
+            );
+        }
 
-        // Connect to database
-        await dbClient.connect();
-
-        // Get client information
-        const ipAddress = request.headers.get('x-forwarded-for') ||
-            request.headers.get('x-real-ip') ||
-            'unknown';
-        const userAgent = request.headers.get('user-agent') || 'unknown';
-
-        // Create contact entry
-        const contact = await Contact.create({
-            name: data.name,
-            email: data.email,
-            projectType: data.projectType,
-            location: data.location,
-            scope: data.scope,
-            phone: data.phone,
-            budget: data.budget,
-            timeline: data.timeline,
-            status: 'new',
-            source: 'website',
-            ipAddress,
-            userAgent,
-        });
-
-        // Send email notifications (non-blocking)
-        Promise.all([
-            sendContactNotification({
-                name: data.name,
-                email: data.email,
-                projectType: data.projectType,
-                location: data.location,
-                scope: data.scope,
-                phone: data.phone,
-                budget: data.budget,
-                timeline: data.timeline,
-            }),
-            sendClientConfirmation(data.email, data.name),
-        ]).catch((error) => {
-            console.error('Email notification error:', error);
-            // Don't fail the request if email fails
-        });
-
-        return NextResponse.json(
-            {
-                success: true,
-                message: 'Your inquiry has been submitted successfully',
-                contactId: contact._id,
-            },
-            { status: 201 }
-        );
-
-    } catch (error: any) {
-        console.error('Contact form submission error:', error);
-
+        // Generic error
         return NextResponse.json(
             {
                 success: false,
-                error: 'Failed to submit inquiry',
-                message: 'An unexpected error occurred. Please try again later.',
+                message: 'Failed to submit contact form. Please try again later.',
             },
             { status: 500 }
         );
     }
 }
 
-// GET endpoint for admin to retrieve contacts
-export async function GET(request: NextRequest) {
+// GET endpoint to retrieve contacts (admin only)
+export async function GET(req: NextRequest) {
     try {
-        // TODO: Add authentication check here
-        // For now, this is a simple implementation
-
-        const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status');
-        const limit = parseInt(searchParams.get('limit') || '50');
-        const page = parseInt(searchParams.get('page') || '1');
-
-        await dbClient.connect();
-
-        const query: any = {};
-        if (status && status !== 'all') {
-            query.status = status;
+        // Check authentication
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json(
+                { success: false, message: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
-        const skip = (page - 1) * limit;
+        // Extract all query parameters
+        const searchParams = req.nextUrl.searchParams;
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '100');
+        const status = searchParams.get('status') || undefined;
+        const projectType = searchParams.get('projectType') || undefined;
+        const search = searchParams.get('search') || undefined;
 
-        const [contacts, total] = await Promise.all([
-            Contact.find(query)
-                .sort({ createdAt: -1 })
-                .limit(limit)
-                .skip(skip)
-                .lean(),
-            Contact.countDocuments(query),
-        ]);
+        // Get contacts using AuthController with all filters
+        const result = await AuthController.getContacts({
+            page,
+            limit,
+            status,
+            projectType,
+            search,
+        });
 
         return NextResponse.json({
             success: true,
-            data: contacts,
-            pagination: {
-                page,
-                limit,
-                total,
-                pages: Math.ceil(total / limit),
-            },
+            ...result,
         });
 
-    } catch (error) {
-        console.error('Contacts fetch error:', error);
+    } catch (error: any) {
+        console.error('Get contacts error:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to fetch contacts' },
+            {
+                success: false,
+                message: error.message || 'Failed to fetch contacts'
+            },
             { status: 500 }
         );
     }

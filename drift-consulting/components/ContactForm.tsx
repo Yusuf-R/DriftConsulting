@@ -1,15 +1,17 @@
+// components/ContactForm.tsx
 'use client';
 
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, ArrowRight, Clock } from 'lucide-react';
 import { contactFormSchema, ContactFormData } from '@/lib/validations';
 
 export default function ContactForm() {
-    const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'rate-limited'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
+    const [retryAfter, setRetryAfter] = useState<number>(0);
 
     const {
         register,
@@ -20,12 +22,38 @@ export default function ContactForm() {
         resolver: zodResolver(contactFormSchema),
     });
 
+    // Countdown timer for rate limit
+    React.useEffect(() => {
+        if (retryAfter > 0) {
+            const timer = setInterval(() => {
+                setRetryAfter(prev => {
+                    if (prev <= 1) {
+                        setSubmitStatus('idle');
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [retryAfter]);
+
+    const formatTime = (seconds: number): string => {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (minutes > 0) {
+            return `${minutes}m ${secs}s`;
+        }
+        return `${secs}s`;
+    };
+
     const onSubmit = async (data: ContactFormData) => {
         setSubmitStatus('loading');
         setErrorMessage('');
+        setRetryAfter(0);
 
         try {
-            const response = await fetch('/api/contact', {
+            const response = await fetch('/api/v1/contact', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -34,6 +62,14 @@ export default function ContactForm() {
             });
 
             const result = await response.json();
+
+            if (response.status === 429) {
+                // Rate limit exceeded
+                setSubmitStatus('rate-limited');
+                setErrorMessage(result.message || 'Too many requests. Please try again later.');
+                setRetryAfter(result.retryAfter || 60);
+                return;
+            }
 
             if (result.success) {
                 setSubmitStatus('success');
@@ -70,7 +106,7 @@ export default function ContactForm() {
                             Your project inquiry has been submitted successfully.
                         </p>
                         <p className="text-gray-400">
-                            We'll review your requirements and get back to you within 24 hours.
+                            We&apos;ll review your requirements and get back to you within 24 hours.
                         </p>
                         <button
                             onClick={() => setSubmitStatus('idle')}
@@ -88,6 +124,26 @@ export default function ContactForm() {
                         onSubmit={handleSubmit(onSubmit)}
                         className="bg-slate-800/50 backdrop-blur-sm p-8 md:p-12 rounded-xl border border-amber-500/20"
                     >
+                        {/* Rate Limit Warning */}
+                        {submitStatus === 'rate-limited' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-orange-500/10 border border-orange-500 rounded-lg p-4 mb-6 flex items-start gap-3"
+                            >
+                                <Clock className="text-orange-500 shrink-0 mt-0.5" size={20} />
+                                <div className="flex-1">
+                                    <p className="text-orange-400 font-semibold">Rate Limit Exceeded</p>
+                                    <p className="text-orange-300 text-sm mt-1">{errorMessage}</p>
+                                    {retryAfter > 0 && (
+                                        <p className="text-orange-200 text-sm mt-2 font-mono">
+                                            Try again in: <span className="font-bold">{formatTime(retryAfter)}</span>
+                                        </p>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+
                         {/* Error Message */}
                         {submitStatus === 'error' && (
                             <motion.div
@@ -95,7 +151,7 @@ export default function ContactForm() {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="bg-red-500/10 border border-red-500 rounded-lg p-4 mb-6 flex items-start gap-3"
                             >
-                                <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={20} />
+                                <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
                                 <p className="text-red-400">{errorMessage}</p>
                             </motion.div>
                         )}
@@ -110,7 +166,7 @@ export default function ContactForm() {
                                     id="name"
                                     type="text"
                                     {...register('name')}
-                                    disabled={submitStatus === 'loading'}
+                                    disabled={submitStatus === 'loading' || submitStatus === 'rate-limited'}
                                     className={`w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border ${
                                         errors.name ? 'border-red-500' : 'border-slate-700'
                                     } focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -130,7 +186,7 @@ export default function ContactForm() {
                                     id="email"
                                     type="email"
                                     {...register('email')}
-                                    disabled={submitStatus === 'loading'}
+                                    disabled={submitStatus === 'loading' || submitStatus === 'rate-limited'}
                                     className={`w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border ${
                                         errors.email ? 'border-red-500' : 'border-slate-700'
                                     } focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -151,7 +207,7 @@ export default function ContactForm() {
                                 <select
                                     id="projectType"
                                     {...register('projectType')}
-                                    disabled={submitStatus === 'loading'}
+                                    disabled={submitStatus === 'loading' || submitStatus === 'rate-limited'}
                                     className={`w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border ${
                                         errors.projectType ? 'border-red-500' : 'border-slate-700'
                                     } focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -177,7 +233,7 @@ export default function ContactForm() {
                                     id="location"
                                     type="text"
                                     {...register('location')}
-                                    disabled={submitStatus === 'loading'}
+                                    disabled={submitStatus === 'loading' || submitStatus === 'rate-limited'}
                                     className={`w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border ${
                                         errors.location ? 'border-red-500' : 'border-slate-700'
                                     } focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -199,7 +255,7 @@ export default function ContactForm() {
                                     id="phone"
                                     type="tel"
                                     {...register('phone')}
-                                    disabled={submitStatus === 'loading'}
+                                    disabled={submitStatus === 'loading' || submitStatus === 'rate-limited'}
                                     className={`w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border ${
                                         errors.phone ? 'border-red-500' : 'border-slate-700'
                                     } focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -218,7 +274,7 @@ export default function ContactForm() {
                                 <select
                                     id="budget"
                                     {...register('budget')}
-                                    disabled={submitStatus === 'loading'}
+                                    disabled={submitStatus === 'loading' || submitStatus === 'rate-limited'}
                                     className="w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border border-slate-700 focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <option value="">Select budget range</option>
@@ -239,7 +295,7 @@ export default function ContactForm() {
                             <select
                                 id="timeline"
                                 {...register('timeline')}
-                                disabled={submitStatus === 'loading'}
+                                disabled={submitStatus === 'loading' || submitStatus === 'rate-limited'}
                                 className="w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border border-slate-700 focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="">Select timeline</option>
@@ -259,7 +315,7 @@ export default function ContactForm() {
                             <textarea
                                 id="scope"
                                 {...register('scope')}
-                                disabled={submitStatus === 'loading'}
+                                disabled={submitStatus === 'loading' || submitStatus === 'rate-limited'}
                                 rows={6}
                                 className={`w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border ${
                                     errors.scope ? 'border-red-500' : 'border-slate-700'
@@ -285,13 +341,18 @@ export default function ContactForm() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={submitStatus === 'loading'}
+                            disabled={submitStatus === 'loading' || submitStatus === 'rate-limited'}
                             className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/50 text-slate-900 font-bold py-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-3 shadow-xl hover:shadow-amber-500/50 disabled:cursor-not-allowed disabled:shadow-none"
                         >
                             {submitStatus === 'loading' ? (
                                 <>
                                     <Loader2 className="animate-spin" size={20} />
                                     Submitting...
+                                </>
+                            ) : submitStatus === 'rate-limited' ? (
+                                <>
+                                    <Clock size={20} />
+                                    Please wait {formatTime(retryAfter)}
                                 </>
                             ) : (
                                 <>

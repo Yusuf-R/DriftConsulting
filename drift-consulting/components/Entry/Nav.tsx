@@ -8,6 +8,7 @@ import { Menu, X, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModeToggle } from '@/components/ModeToggle';
 import ThemeAwareLogo from '@/components/ThemeAwareLogo'; // Import the new component
+import BrandText from "@/components/Entry/BrandText"
 
 // Navigation items
 const items = [
@@ -21,9 +22,11 @@ const items = [
 interface NavProps {
     brand: string;
     // Remove logoSrc, we'll handle logos differently
+    brandVariant?: 'split-color' | 'gradient' | 'elegant' | 'badge' | 'stacked' | 'minimalist' | 'contrast';
+
 }
 
-export default function Nav({ brand }: NavProps) {
+export default function Nav({ brand, brandVariant }: NavProps) {
     const pathname = usePathname();
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -85,11 +88,14 @@ export default function Nav({ brand }: NavProps) {
                                 alt={brand}
                                 width={70}
                                 height={70}
-                                className="w-14 h-14 lg:w-16 lg:h-16 object-contain"
+                                className="w-14 h-14 lg:w-16 lg:h-16 object-contain group-hover:scale-105 transition-transform duration-300"
                             />
-                            <span className="text-sm sm:text-lg lg:text-xl font-bold text-slate-900 dark:text-white">
-                                {brand}
-                            </span>
+                            {/*<span className="text-sm sm:text-lg lg:text-xl font-bold text-slate-900 dark:text-white">*/}
+                            {/*    {brand}*/}
+                            {/*</span>*/}
+                            <div className="sm:block">
+                                <BrandText brand={brand} variant={brandVariant} />
+                            </div>
                         </Link>
 
                         {/* Desktop Navigation */}

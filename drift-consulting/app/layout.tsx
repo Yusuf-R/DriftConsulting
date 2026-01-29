@@ -1,9 +1,9 @@
 import type {Metadata} from "next";
 import {Geist, Geist_Mono, Inter, Cormorant_Garamond} from "next/font/google";
 import "./globals.css";
-import {ThemeProvider} from "@/components/providers/ThemeProvider/ThemeProvider"
+import {ThemeProvider} from "@/app/providers/ThemeProvider/ThemeProvider"
 import {Toaster} from "sonner"
-import ReactQueryProvider from "@/components/providers/ReactQuery/ReactQueryProvider";
+import ReactQueryProvider from "@/app/providers/ReactQuery/ReactQueryProvider";
 
 
 const geistSans = Geist({

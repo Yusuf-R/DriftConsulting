@@ -1,16 +1,17 @@
 import React from 'react';
+import {requireRole} from "@/lib/auth/requireRole";
 
-function AdminPage() {
+async function Page() {
+    const { user } = await requireRole(['admin', 'superAdmin']);
     return (
         <>
-            <div className="mt-4 text-center">
-                <p className="text-gray-700">
-                    You have access to the admin dashboard. Use the sidebar to manage users, settings, and more.
-                </p>
+            <div>
+                <h3>
+                    This will handle the rerouting to either dashboard or login page
+                </h3>
             </div>
-
         </>
     );
 }
 
-export default AdminPage;
+export default Page;

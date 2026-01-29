@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import Home from '@/components/Entry/Home';
+import Home from '@/components/Entry/Home/Home';
 
 export const metadata: Metadata = {
     title: 'Home',

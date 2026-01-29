@@ -2,6 +2,21 @@
 import {axiosPublic, axiosPrivate} from "@/utils/AxiosInstance"
 
 class AdminUtils {
+
+    static async singUp(obj: {name: string, email: string, password: string}) {
+        try {
+            const response = await axiosPrivate({
+                method: "GET",
+                url: '/admin/profile',
+                data: obj
+            });
+            return response.data
+
+        } catch (error) {
+            console.log({error});
+            throw new Error(error);
+        }
+    }
     static async adminData() {
         try {
             const response = await axiosPrivate({

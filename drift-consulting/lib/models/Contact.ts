@@ -1,3 +1,4 @@
+// /lib/models/Contact.ts
 import mongoose, { Schema, models, Model, Document } from 'mongoose';
 
 export interface IContact extends Document {
