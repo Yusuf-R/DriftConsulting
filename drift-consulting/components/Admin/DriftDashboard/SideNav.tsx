@@ -39,7 +39,7 @@ export default function SideNav({ navState, activeRoute, userData }: SideNavProp
         { icon: Mail, label: "Contacts", path: "/admin/protected/contacts", badge: 3 },
         { icon: BarChart3, label: "Analytics", path: "/admin/protected/analytics" },
         { icon: FileText, label: "Content", path: "/admin/protected/content" },
-        { icon: Users, label: "Users", path: "/admin/protected/users", roles: ["superAdmin", "admin"] },
+        { icon: Users, label: "Users", path: "/admin/protected/users", roles: ["superAdmin", "admin", "support"] },
         { icon: Bell, label: "Notifications", path: "/admin/protected/notifications", badge: 5 },
         { icon: LifeBuoy, label: "Support", path: "/admin/protected/support" },
         { icon: Settings, label: "Settings", path: "/admin/protected/settings" },
@@ -195,7 +195,7 @@ export default function SideNav({ navState, activeRoute, userData }: SideNavProp
                                         disabled={isLoading}
                                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 relative group ${
                                             isActive
-                                                ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30"
+                                                ? "bg-linear-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30"
                                                 : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                                         } ${isLoading ? "opacity-75 cursor-not-allowed" : "cursor-pointer hover:scale-[1.02]"}`}
                                         title={isIconOnly ? item.label : ""}

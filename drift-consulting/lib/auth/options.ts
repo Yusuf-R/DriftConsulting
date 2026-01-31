@@ -44,7 +44,10 @@ const options = {
                     access_type: "offline",
                     response_type: "code"
                 }
-            }
+            },
+            httpOptions: {
+                timeout: 1200000, // 120 seconds
+            },
         }),
 
         // This is ONLY for creating sessions after successful API validation
@@ -77,8 +80,6 @@ const options = {
                 } catch (error) {
                     console.error("Session creation error:", error);
                     return null;
-                } finally {
-                    await dbClient.close();
                 }
             }
         }),
@@ -97,6 +98,11 @@ const options = {
             if (account?.provider === "google") {
                 try {
                     await dbClient.connect();
+                    console.log({
+                        user,
+                        account,
+                        profile
+                    })
 
                     let existingUser = await Drift.findOne({
                         email: profile?.email?.toLowerCase()
@@ -108,6 +114,7 @@ const options = {
                             name: profile?.name || "",
                             image: profile?.picture || user.image,
                             provider: "google",
+                            emailVerified: true,
                             providerId: profile?.sub,
                             role: "support",
                             isActive: true,
@@ -132,8 +139,6 @@ const options = {
                 } catch (error) {
                     console.error("Google sign-in error:", error);
                     return false;
-                } finally {
-                    await dbClient.close();
                 }
             }
             return true;
@@ -159,9 +164,14 @@ const options = {
     },
     events: {
         async signIn({ user, isNewUser }) {
-            console.log(`User signed in: ${user.email}, New user: ${isNewUser}`);
+            console.log(`✅ User signed in: ${user.email}, New user: ${isNewUser}`);
+        },
+        async signOut({ token }) {
+            console.log(`👋 User signed out: ${token?.email}`);
         },
     },
+    // Add debug mode in development
+    debug: process.env.NODE_ENV === 'development',
 };
 
 export default options;

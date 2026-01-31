@@ -110,7 +110,7 @@ export default function AdminLogin() {
 
     const handleGoogleSignIn = async () => {
         try {
-            await signIn("google", { callbackUrl });
+            await signIn("google", { redirectTo: "/admin/protected/dashboard" });
         } catch (error) {
             setError("root", {
                 message: "Failed to sign in with Google",
