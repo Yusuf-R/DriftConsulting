@@ -87,7 +87,7 @@ A modern, full-stack web application built for Drift Consulting - a leading cons
 - **Data Tables:** TanStack Table
 
 ### Backend
-- **Runtime:** Node.js 20+
+- **Runtime:** NextJS App router -- edge runtime+
 - **API:** Next.js API Routes & Server Actions
 - **Authentication:** NextAuth.js v5
 - **Database:** MongoDB with Mongoose ODM
@@ -162,7 +162,7 @@ npm start
 Create a `.env.local` file with the following variables:
 ```bash
 # Database
-DATABASE_URL=mongodb+srv://username:password@cluster.mongodb.net/driftconsulting
+DATABASE_URL="Your mongdb url"
 
 # NextAuth
 AUTH_SECRET=your-secret-key-here-generate-with-openssl
@@ -174,7 +174,7 @@ AUTH_GOOGLE_ID=your-google-client-id
 AUTH_GOOGLE_SECRET=your-google-client-secret
 
 # Upstash Redis (Rate Limiting)
-UPSTASH_REDIS_REST_URL=https://your-redis-url.upstash.io
+UPSTASH_REDIS_REST_URL="YOur upstash redis url"
 UPSTASH_REDIS_REST_TOKEN=your-redis-token
 
 # App Configuration
