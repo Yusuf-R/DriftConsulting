@@ -1,9 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd drift-consulting && pnpm run build",
-  "devCommand": "cd drift-consulting && pnpm run dev",
-  "installCommand": "cd drift-consulting && pnpm install",
-  "outputDirectory": "drift-consulting/.next",
+  "buildCommand": "pnpm run build",
+  "devCommand": "pnpm run dev",
+  "installCommand": "pnpm install",
   "framework": "nextjs",
   "headers": [
     {
