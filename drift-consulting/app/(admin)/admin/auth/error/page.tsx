@@ -1,7 +1,7 @@
 // app/(admin)/admin/auth/error/page.tsx
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -10,7 +10,8 @@ import {
     ArrowLeft, Home, RefreshCw
 } from "lucide-react";
 
-export default function AuthError() {
+// Separate component that uses useSearchParams
+function ErrorContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const error = searchParams.get("error");
@@ -113,71 +114,85 @@ export default function AuthError() {
     const Icon = config.icon;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="w-full max-w-md"
-            >
-                <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
-                    {/* Error Icon */}
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                        className={`w-16 h-16 ${config.bgColor} rounded-full flex items-center justify-center mx-auto mb-6`}
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full max-w-md"
+        >
+            <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className={`w-16 h-16 ${config.bgColor} rounded-full flex items-center justify-center mx-auto mb-6`}
+                >
+                    <Icon className={`w-8 h-8 ${config.color}`} />
+                </motion.div>
+
+                <h1 className="text-2xl font-bold text-slate-900 text-center mb-3">
+                    {config.title}
+                </h1>
+
+                <p className="text-slate-600 text-center mb-8">
+                    {config.message}
+                </p>
+
+                {error && (
+                    <div className="bg-slate-50 rounded-lg p-3 mb-6">
+                        <p className="text-xs text-slate-500 text-center font-mono">
+                            Error Code: {error}
+                        </p>
+                    </div>
+                )}
+
+                <div className="space-y-3">
+                    <button
+                        onClick={() => router.back()}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                     >
-                        <Icon className={`w-8 h-8 ${config.color}`} />
-                    </motion.div>
+                        <RefreshCw className="w-4 h-4" />
+                        Try Again
+                    </button>
 
-                    {/* Error Title */}
-                    <h1 className="text-2xl font-bold text-slate-900 text-center mb-3">
-                        {config.title}
-                    </h1>
+                    <Link
+                        href="/admin/auth/login"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Login
+                    </Link>
 
-                    {/* Error Message */}
-                    <p className="text-slate-600 text-center mb-8">
-                        {config.message}
-                    </p>
+                    <Link
+                        href="/"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-slate-600 hover:text-slate-900 transition-colors font-medium"
+                    >
+                        <Home className="w-4 h-4" />
+                        Go Home
+                    </Link>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
 
-                    {/* Error Code (if available) */}
-                    {error && (
-                        <div className="bg-slate-50 rounded-lg p-3 mb-6">
-                            <p className="text-xs text-slate-500 text-center font-mono">
-                                Error Code: {error}
-                            </p>
+// Main component with Suspense wrapper
+export default function AuthError() {
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex items-center justify-center p-4">
+            <Suspense fallback={
+                <div className="w-full max-w-md">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+                        <div className="animate-pulse">
+                            <div className="w-16 h-16 bg-slate-200 rounded-full mx-auto mb-6"></div>
+                            <div className="h-8 bg-slate-200 rounded mb-3"></div>
+                            <div className="h-4 bg-slate-200 rounded mb-8"></div>
                         </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="space-y-3">
-                        <button
-                            onClick={() => router.back()}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                        >
-                            <RefreshCw className="w-4 h-4" />
-                            Try Again
-                        </button>
-
-                        <Link
-                            href="/admin/auth/login"
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                            Back to Login
-                        </Link>
-
-                        <Link
-                            href="/"
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-slate-600 hover:text-slate-900 transition-colors font-medium"
-                        >
-                            <Home className="w-4 h-4" />
-                            Go Home
-                        </Link>
                     </div>
                 </div>
-            </motion.div>
+            }>
+                <ErrorContent />
+            </Suspense>
         </div>
     );
 }

@@ -164,7 +164,6 @@ const ProjectSchema = new Schema<IProject>(
 );
 
 // Indexes
-ProjectSchema.index({ slug: 1 });
 ProjectSchema.index({ category: 1, published: 1 });
 ProjectSchema.index({ featured: 1, order: 1 });
 ProjectSchema.index({ status: 1 });
