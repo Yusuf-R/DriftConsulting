@@ -4,21 +4,19 @@
 import React, {useState} from "react";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
-import {useMutation} from "@tanstack/react-query";
 import {signIn} from "next-auth/react";
 import {useRouter} from "next/navigation";
 import {motion} from "framer-motion";
 import Link from "next/link";
-import axios from "axios";
 import {
-    Shield, Lock, Mail, Eye, EyeOff, ArrowRight, User,
-    Building2, Sparkles, CheckCircle2, AlertCircle, Check
+   Lock, Mail, Eye, EyeOff, ArrowRight, User,
+   Sparkles, CheckCircle2, AlertCircle, Check
 } from "lucide-react";
 import {adminSignupSchema, type AdminSignupData} from "@/lib/validations";
 import Image from "next/image";
 import {toast} from "sonner"
-import { parseAuthError } from "@/lib/utils/authErrorHandler";
 
+const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 export default function AdminSignup() {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
@@ -56,7 +54,7 @@ export default function AdminSignup() {
             toast.loading("Creating your account...", { id: "signup" });
 
             // Step 1: Create account via API
-            const signupResponse = await fetch('/api/v1/auth/signup', {
+            const signupResponse = await fetch(`${baseUrl}/api/v1/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
