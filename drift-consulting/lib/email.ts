@@ -1,23 +1,7 @@
 // lib/email.ts
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_APP_PASSWORD,
-    },
-});
-
-// Verify transporter configuration
-transporter.verify(function (error, success) {
-    if (error) {
-        console.error('Email transporter error:', error);
-    } else {
-        console.log('Email server is ready to send messages');
-    }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 interface ContactEmailData {
     name: string;
@@ -32,11 +16,12 @@ interface ContactEmailData {
 
 // Send OTP Email for Password Reset
 export async function sendOTPEmail(email: string, otp: string, name?: string) {
-    const mailOptions = {
-        from: `"Drift Consulting" <${process.env.EMAIL_FROM}>`,
-        to: email,
-        subject: 'Password Reset OTP - Drift Consulting',
-        html: `
+    try {
+        const { data, error } = await resend.emails.send({
+            from: process.env.EMAIL_FROM || 'Drift Consulting <noreply@yourdomain.com>',
+            to: email,
+            subject: 'Password Reset OTP - Drift Consulting',
+            html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -198,31 +183,35 @@ export async function sendOTPEmail(email: string, otp: string, name?: string) {
     </div>
 </body>
 </html>
-        `,
-    };
+            `,
+        });
 
-    try {
-        await transporter.sendMail(mailOptions);
-        return { success: true };
+        if (error) {
+            console.error('OTP email send error:', error);
+            return { success: false, error };
+        }
+
+        return { success: true, data };
     } catch (error) {
-        console.error('OTP email send error:', error);
+        console.error('OTP email service error:', error);
         return { success: false, error };
     }
 }
 
 // Send Contact Notification to Admin
 export async function sendContactNotification(data: ContactEmailData) {
-    const projectTypeLabels: Record<string, string> = {
-        residential: 'Residential',
-        hospitality: 'Hospitality',
-        institutional: 'Institutional',
-        commercial: 'Commercial',
-        government: 'Government',
-    };
+    try {
+        const projectTypeLabels: Record<string, string> = {
+            residential: 'Residential',
+            hospitality: 'Hospitality',
+            institutional: 'Institutional',
+            commercial: 'Commercial',
+            government: 'Government',
+        };
 
-    const emailHtml = `
+        const emailHtml = `
 <!DOCTYPE html>
-<html  lang="en">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <style>
@@ -233,18 +222,12 @@ export async function sendContactNotification(data: ContactEmailData) {
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
-      background-color: #f8fafc;
-    }
-    .container {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     .header {
       background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
       color: white;
       padding: 30px;
+      border-radius: 8px 8px 0 0;
       text-align: center;
     }
     .header h1 {
@@ -256,20 +239,22 @@ export async function sendContactNotification(data: ContactEmailData) {
       display: inline-block;
       background: #f59e0b;
       color: #1e293b;
-      padding: 6px 16px;
+      padding: 4px 12px;
       border-radius: 20px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       margin-top: 10px;
     }
     .content {
+      background: #f8fafc;
       padding: 30px;
+      border-radius: 0 0 8px 8px;
     }
     .field {
       margin-bottom: 20px;
-      background: #f8fafc;
-      padding: 16px;
-      border-radius: 8px;
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
       border-left: 4px solid #f59e0b;
     }
     .field-label {
@@ -277,148 +262,139 @@ export async function sendContactNotification(data: ContactEmailData) {
       color: #64748b;
       font-size: 12px;
       text-transform: uppercase;
-      margin-bottom: 6px;
-      letter-spacing: 0.5px;
+      margin-bottom: 5px;
     }
     .field-value {
       color: #1e293b;
       font-size: 16px;
     }
-    .field-value a {
-      color: #f59e0b;
-      text-decoration: none;
-    }
-    .field-value a:hover {
-      text-decoration: underline;
-    }
     .scope-box {
       background: white;
       padding: 20px;
-      border-radius: 8px;
+      border-radius: 6px;
       border: 2px solid #e2e8f0;
       margin-top: 10px;
-      line-height: 1.8;
     }
     .footer {
       text-align: center;
-      padding: 25px;
+      margin-top: 30px;
+      padding-top: 20px;
       border-top: 2px solid #e2e8f0;
       color: #64748b;
-      font-size: 13px;
-      background: #f8fafc;
+      font-size: 14px;
     }
     .cta-button {
       display: inline-block;
       background: #f59e0b;
       color: white;
-      padding: 14px 32px;
+      padding: 12px 30px;
       text-decoration: none;
-      border-radius: 8px;
+      border-radius: 6px;
       font-weight: 600;
       margin-top: 20px;
-      transition: background 0.3s;
-    }
-    .cta-button:hover {
-      background: #d97706;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>🏗️ New Project Inquiry</h1>
-      <span class="badge">${projectTypeLabels[data.projectType] || data.projectType}</span>
+  <div class="header">
+    <h1>🏗️ New Project Inquiry</h1>
+    <span class="badge">${projectTypeLabels[data.projectType] || data.projectType}</span>
+  </div>
+  
+  <div class="content">
+    <div class="field">
+      <div class="field-label">Contact Name</div>
+      <div class="field-value">${data.name}</div>
     </div>
-    
-    <div class="content">
-      <div class="field">
-        <div class="field-label">Contact Name</div>
-        <div class="field-value">${data.name}</div>
-      </div>
 
-      <div class="field">
-        <div class="field-label">Email Address</div>
-        <div class="field-value">
-          <a href="mailto:${data.email}">${data.email}</a>
-        </div>
-      </div>
-
-      ${data.phone ? `
-      <div class="field">
-        <div class="field-label">Phone Number</div>
-        <div class="field-value">
-          <a href="tel:${data.phone}">${data.phone}</a>
-        </div>
-      </div>
-      ` : ''}
-
-      <div class="field">
-        <div class="field-label">Project Location</div>
-        <div class="field-value">${data.location}</div>
-      </div>
-
-      ${data.budget ? `
-      <div class="field">
-        <div class="field-label">Budget Range</div>
-        <div class="field-value">${data.budget}</div>
-      </div>
-      ` : ''}
-
-      ${data.timeline ? `
-      <div class="field">
-        <div class="field-label">Expected Timeline</div>
-        <div class="field-value">${data.timeline}</div>
-      </div>
-      ` : ''}
-
-      <div class="field">
-        <div class="field-label">Project Scope & Requirements</div>
-        <div class="scope-box">${data.scope.replace(/\n/g, '<br>')}</div>
-      </div>
-
-      <div style="text-align: center;">
-        <a href="mailto:${data.email}" class="cta-button">Reply to Inquiry</a>
+    <div class="field">
+      <div class="field-label">Email Address</div>
+      <div class="field-value">
+        <a href="mailto:${data.email}" style="color: #f59e0b; text-decoration: none;">${data.email}</a>
       </div>
     </div>
 
-    <div class="footer">
-      <p><strong>Inquiry received from portfolio website</strong></p>
-      <p>${new Date().toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })}</p>
+    ${data.phone ? `
+    <div class="field">
+      <div class="field-label">Phone Number</div>
+      <div class="field-value">
+        <a href="tel:${data.phone}" style="color: #f59e0b; text-decoration: none;">${data.phone}</a>
+      </div>
     </div>
+    ` : ''}
+
+    <div class="field">
+      <div class="field-label">Project Location</div>
+      <div class="field-value">${data.location}</div>
+    </div>
+
+    ${data.budget ? `
+    <div class="field">
+      <div class="field-label">Budget Range</div>
+      <div class="field-value">${data.budget}</div>
+    </div>
+    ` : ''}
+
+    ${data.timeline ? `
+    <div class="field">
+      <div class="field-label">Expected Timeline</div>
+      <div class="field-value">${data.timeline}</div>
+    </div>
+    ` : ''}
+
+    <div class="field">
+      <div class="field-label">Project Scope & Requirements</div>
+      <div class="scope-box">${data.scope.replace(/\n/g, '<br>')}</div>
+    </div>
+
+    <div style="text-align: center;">
+      <a href="mailto:${data.email}" class="cta-button">Reply to Inquiry</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>This inquiry was submitted through your portfolio website.</p>
+    <p style="font-size: 12px; color: #94a3b8;">
+      Received on ${new Date().toLocaleDateString('en-GB', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })}
+    </p>
   </div>
 </body>
 </html>
-    `;
+        `;
 
-    const mailOptions = {
-        from: `"Drift Consulting - Contact Form" <${process.env.EMAIL_FROM}>`,
-        to: process.env.EMAIL_TO || process.env.EMAIL_USER,
-        replyTo: data.email,
-        subject: `🏗️ New ${projectTypeLabels[data.projectType]} Project Inquiry from ${data.name}`,
-        html: emailHtml,
-    };
+        const { data: emailData, error } = await resend.emails.send({
+            from: process.env.EMAIL_FROM || 'Drift Consulting <noreply@yourdomain.com>',
+            to: process.env.EMAIL_TO || 'admin@yourdomain.com',
+            subject: `🏗️ New ${projectTypeLabels[data.projectType]} Project Inquiry from ${data.name}`,
+            html: emailHtml,
+            replyTo: data.email,
+        });
 
-    try {
-        await transporter.sendMail(mailOptions);
-        return { success: true };
+        if (error) {
+            console.error('Contact notification email send error:', error);
+            return { success: false, error };
+        }
+
+        return { success: true, data: emailData };
     } catch (error) {
-        console.error('Contact notification email send error:', error);
+        console.error('Contact notification email service error:', error);
         return { success: false, error };
     }
 }
 
-// Send Auto-reply to Client
+// Auto-reply to Client
 export async function sendClientConfirmation(email: string, name: string) {
-    const emailHtml = `
+    try {
+        const emailHtml = `
 <!DOCTYPE html>
-<html  lang="en">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <style>
@@ -429,117 +405,89 @@ export async function sendClientConfirmation(email: string, name: string) {
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
-      background-color: #f8fafc;
-    }
-    .container {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     .header {
       background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
       color: white;
       padding: 40px;
+      border-radius: 8px 8px 0 0;
       text-align: center;
     }
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-    }
     .content {
-      padding: 40px 30px;
+      background: #f8fafc;
+      padding: 40px;
+      border-radius: 0 0 8px 8px;
     }
     .content p {
       font-size: 16px;
       color: #1e293b;
       margin-bottom: 15px;
-      line-height: 1.8;
     }
     .highlight {
-      background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-      padding: 25px;
-      border-radius: 8px;
+      background: white;
+      padding: 20px;
+      border-radius: 6px;
       border-left: 4px solid #f59e0b;
-      margin: 25px 0;
-    }
-    .highlight strong {
-      color: #1F4788;
-      font-size: 17px;
-    }
-    .highlight ul {
-      margin: 15px 0 0 0;
-      padding-left: 20px;
-    }
-    .highlight li {
-      margin: 8px 0;
-      color: #334155;
+      margin: 20px 0;
     }
     .footer {
       text-align: center;
-      padding: 25px;
+      margin-top: 30px;
       color: #64748b;
-      font-size: 13px;
-      background: #f8fafc;
-      border-top: 2px solid #e2e8f0;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>✅ We've Received Your Inquiry</h1>
+  <div class="header">
+    <h1>✅ We've Received Your Inquiry</h1>
+  </div>
+  
+  <div class="content">
+    <p>Dear ${name},</p>
+    
+    <p>Thank you for your interest in our construction project management services. We have successfully received your project inquiry and appreciate you taking the time to provide detailed information.</p>
+    
+    <div class="highlight">
+      <strong>What happens next?</strong><br><br>
+      Our team will carefully review your project requirements and get back to you within 24 hours with:<br>
+      • Initial project assessment<br>
+      • Next steps for consultation<br>
+      • Any additional information we may need
     </div>
     
-    <div class="content">
-      <p>Dear ${name},</p>
-      
-      <p>Thank you for your interest in Drift Consulting's construction project management services. We have successfully received your project inquiry and appreciate you taking the time to provide detailed information about your requirements.</p>
-      
-      <div class="highlight">
-        <strong>📋 What happens next?</strong>
-        <ul>
-          <li><strong>Review:</strong> Our team will carefully assess your project requirements</li>
-          <li><strong>Response:</strong> We'll get back to you within 24 hours</li>
-          <li><strong>Consultation:</strong> Schedule a detailed discussion about your project</li>
-          <li><strong>Proposal:</strong> Receive a customized project plan and quote</li>
-        </ul>
-      </div>
-      
-      <p>In the meantime, if you have any urgent questions or additional information to share, please feel free to reply to this email or contact us directly.</p>
-      
-      <p>We look forward to the opportunity to work with you on your project!</p>
-      
-      <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-        <strong>Best regards,</strong><br>
-        The Drift Consulting Team<br>
-        <span style="color: #64748b; font-size: 14px;">Construction Project Management Excellence</span>
-      </p>
-    </div>
+    <p>In the meantime, if you have any urgent questions or additional information to share, please feel free to reply to this email.</p>
+    
+    <p>We look forward to discussing your project with you.</p>
+    
+    <p style="margin-top: 30px;">
+      <strong>Best regards,</strong><br>
+      Drift Consulting Team
+    </p>
+  </div>
 
-    <div class="footer">
-      <p><strong>Drift Consulting</strong></p>
-      <p>This is an automated confirmation email.</p>
-      <p>© ${new Date().getFullYear()} Drift Consulting. All rights reserved.</p>
-    </div>
+  <div class="footer">
+    <p>This is an automated confirmation. Please do not reply to this email.</p>
   </div>
 </body>
 </html>
-    `;
+        `;
 
-    const mailOptions = {
-        from: `"Drift Consulting" <${process.env.EMAIL_FROM}>`,
-        to: email,
-        subject: '✅ Your Project Inquiry Has Been Received - Drift Consulting',
-        html: emailHtml,
-    };
+        const { data, error } = await resend.emails.send({
+            from: process.env.EMAIL_FROM || 'Drift Consulting <noreply@yourdomain.com>',
+            to: email,
+            subject: 'Your Project Inquiry Has Been Received',
+            html: emailHtml,
+        });
 
-    try {
-        await transporter.sendMail(mailOptions);
-        return { success: true };
+        if (error) {
+            console.error('Client confirmation email send error:', error);
+            return { success: false, error };
+        }
+
+        return { success: true, data };
     } catch (error) {
-        console.error('Client confirmation email error:', error);
+        console.error('Client confirmation email service error:', error);
         return { success: false, error };
     }
 }
