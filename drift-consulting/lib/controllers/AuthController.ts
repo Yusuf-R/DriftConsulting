@@ -68,6 +68,7 @@ class AuthController {
                 _id: newUser._id.toString(),
                 email: newUser.email,
                 name: newUser.name,
+                role: newUser.role,
             };
         } catch (error: any) {
             console.error("Sign up error:", error);
@@ -410,7 +411,7 @@ class AuthController {
             }
 
             // Check attempts (max 5)
-            if (user.resetPasswordAttempts >= 5) {
+            if (user.resetPasswordAttempts || 0 >= 5) {
                 throw new Error("Too many failed attempts. Please request a new OTP.");
             }
 

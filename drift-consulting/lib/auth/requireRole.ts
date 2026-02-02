@@ -1,11 +1,11 @@
 // lib/auth/requireRole.ts
 import { auth } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
+import type { Session } from "next-auth";
 
 export type Role = 'superAdmin' | 'admin' | 'support';
 export type AllowedRoles = Role[];
 
-// Type for authenticated user with role
 export type AuthenticatedUser = {
     id: string;
     name?: string | null;
@@ -15,7 +15,7 @@ export type AuthenticatedUser = {
 
 // Result type for the requireRole function
 type AuthResult = {
-    session: NonNullable<Awaited<ReturnType<typeof auth>>>;
+    session: Session;
     user: AuthenticatedUser;
 };
 
@@ -28,15 +28,12 @@ type AuthResult = {
 export async function requireRole(allowed: AllowedRoles): Promise<AuthResult> {
     const session = await auth();
 
-    // Redirect to login if no session
     if (!session?.user) {
         redirect("/admin/auth/login");
     }
 
-    // Cast the role and validate
     const role = session.user.role as string;
 
-    // Check if role is valid
     const isValidRole = (role: string): role is Role => {
         return ['superAdmin', 'admin', 'support'].includes(role);
     };
@@ -46,16 +43,13 @@ export async function requireRole(allowed: AllowedRoles): Promise<AuthResult> {
         redirect("/admin/auth/login");
     }
 
-    // Check if user's role is allowed
     if (!allowed.includes(role)) {
-        // Log unauthorized access attempt
         console.warn(
             `Unauthorized access attempt by ${session.user.email} with role ${role} to page requiring [${allowed.join(', ')}]`
         );
         redirect("/admin/auth/unauthorized");
     }
 
-    // Return typed user object
     const user: AuthenticatedUser = {
         id: session.user.id as string,
         name: session.user.name,
@@ -88,7 +82,6 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
 
     return {
         id: session.user.id as string,
-        email: session.user.email as string,
         name: session.user.name,
         role: role,
         image: session.user.image,

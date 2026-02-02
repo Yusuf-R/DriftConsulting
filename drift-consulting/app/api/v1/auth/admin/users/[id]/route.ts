@@ -1,12 +1,14 @@
-// app/api/admin/users/[id]/route.ts
+// app/api/v1/auth/admin/users/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import dbClient from "@/lib/mongoDB";
 import Drift from "@/lib/models/Drift/Drift";
 
 // GET - Get single user
-export async function GET( req: NextRequest, { params }: { params: { id: string } }) {
-    const {id} = await params;
+export async function GET(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const session = await auth();
         if (!session?.user) {
@@ -15,6 +17,8 @@ export async function GET( req: NextRequest, { params }: { params: { id: string 
                 { status: 401 }
             );
         }
+
+        const { id } = await params;
 
         await dbClient.connect();
         const user = await Drift.findById(id).select('-password').lean();
@@ -41,8 +45,10 @@ export async function GET( req: NextRequest, { params }: { params: { id: string 
 }
 
 // PATCH - Update user
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-    const {id} = await params;
+export async function PATCH(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const session = await auth();
         if (!session?.user) {
@@ -51,6 +57,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
                 { status: 401 }
             );
         }
+
+        const { id } = await params;
 
         // Only admin/superAdmin can update other users
         if (!['admin', 'superAdmin'].includes(session.user.role) && session.user.id !== id) {
@@ -76,7 +84,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             { new: true, select: '-password' }
         ).lean();
 
-
         if (!user) {
             return NextResponse.json(
                 { success: false, message: "User not found" },
@@ -100,8 +107,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // DELETE - Delete user
-export async function DELETE( req: NextRequest, { params }: { params: { id: string } }) {
-    const {id} = await params;
+export async function DELETE(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const session = await auth();
         if (!session?.user) {
@@ -111,6 +120,8 @@ export async function DELETE( req: NextRequest, { params }: { params: { id: stri
             );
         }
 
+        const { id } = await params;
+
         // Only admin/superAdmin can delete users
         if (!['admin', 'superAdmin'].includes(session.user.role)) {
             return NextResponse.json(
@@ -118,7 +129,6 @@ export async function DELETE( req: NextRequest, { params }: { params: { id: stri
                 { status: 403 }
             );
         }
-
 
         // Prevent deleting yourself
         if (session.user.id === id) {

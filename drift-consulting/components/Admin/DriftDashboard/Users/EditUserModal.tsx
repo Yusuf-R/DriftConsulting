@@ -1,7 +1,7 @@
 // components/Admin/DriftDashboard/Users/EditUserModal.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Edit } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
@@ -33,7 +33,7 @@ export default function EditUserModal({ isOpen, user, onClose, onSuccess }: Edit
     }, [user]);
 
     const updateMutation = useMutation({
-        mutationFn: (data: { name: string; role: string; isActive: boolean }) =>
+        mutationFn: (data: { name: string; role: 'superAdmin' | 'admin' | 'support'; isActive: boolean }) =>
             AdminUtils.updateUser(user._id, data),
         onSuccess: (response) => {
             toast.success('User updated successfully');

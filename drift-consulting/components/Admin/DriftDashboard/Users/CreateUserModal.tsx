@@ -24,7 +24,7 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUs
     });
 
     const createMutation = useMutation({
-        mutationFn: (data: { name: string; email: string; password: string; role: string }) =>
+        mutationFn: (data: { name: string; email: string; password: string; role: 'superAdmin' | 'admin' | 'support' }) =>
             AdminUtils.createUser(data),
         onSuccess: (response) => {
             toast.success('User created successfully');

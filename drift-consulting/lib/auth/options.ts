@@ -1,38 +1,13 @@
 // lib/auth/options.ts
+import type { NextAuthConfig } from "next-auth";
+import type { User, Account, Profile } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import dbClient from "@/lib/mongoDB/index";
 import Drift from "@/lib/models/Drift/Drift";
 
-interface loginCredential {
-    email: string;
-    password: string;
-}
-
-interface googleUser {
-    id: string;
-    role: string;
-    name: string;
-    email: string;
-    image: string;
-    provider: string;
-    providerId: string;
-    adminRole: string;
-}
-
-interface googleProfile {
-    email: string;
-    name: string;
-    sub: string;
-    picture: string;
-}
-
-interface googleAccount {
-    provider: string;
-    providerAccountId: string;
-}
-
-const options = {
+const options: NextAuthConfig = {
     secret: process.env.AUTH_SECRET,
     providers: [
         Google({
@@ -45,12 +20,11 @@ const options = {
                     response_type: "code"
                 }
             },
-            httpOptions: {
-                timeout: 1200000, // 120 seconds
-            },
+            // httpOptions: {
+            //     timeout: 1200000,
+            // },
         }),
 
-        // This is ONLY for creating sessions after successful API validation
         Credentials({
             id: 'credentials',
             name: 'Credentials',
@@ -58,13 +32,16 @@ const options = {
                 email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
             },
-            authorize: async (credentials: loginCredential) => {
+            authorize: async (credentials) => {
                 try {
+                    if (!credentials?.email || !credentials?.password) {
+                        return null;
+                    }
+
                     await dbClient.connect();
 
-                    // Just fetch the user - validation already done in API route
                     const user = await Drift.findOne({
-                        email: credentials.email.toLowerCase()
+                        email: (credentials.email as string).toLowerCase()
                     });
 
                     if (!user) {
@@ -80,6 +57,8 @@ const options = {
                 } catch (error) {
                     console.error("Session creation error:", error);
                     return null;
+                } finally {
+                    await dbClient.close();
                 }
             }
         }),
@@ -89,33 +68,32 @@ const options = {
         error: '/admin/auth/error',
     },
     session: {
-        strategy: "jwt",
+        strategy: "jwt" as const,
         maxAge: 90 * 24 * 60 * 60,
         updateAge: 24 * 60 * 60,
     },
     callbacks: {
-        async signIn({ user, account, profile }: { user: googleUser, account: googleAccount, profile: googleProfile }) {
+        async signIn({user, account, profile}: {
+            user: User;
+            account?: Account | null | undefined;
+            profile?: Profile;
+        }) {
             if (account?.provider === "google") {
                 try {
                     await dbClient.connect();
-                    console.log({
-                        user,
-                        account,
-                        profile
-                    })
 
                     let existingUser = await Drift.findOne({
-                        email: profile?.email?.toLowerCase()
+                        email: (profile?.email || user.email)?.toLowerCase()
                     });
 
                     if (!existingUser) {
                         existingUser = await Drift.create({
-                            email: profile?.email?.toLowerCase(),
-                            name: profile?.name || "",
-                            image: profile?.picture || user.image,
+                            email: (profile?.email || user.email)?.toLowerCase(),
+                            name: profile?.name || user.name || "",
+                            image: (profile as any)?.picture || user.image,
                             provider: "google",
                             emailVerified: true,
-                            providerId: profile?.sub,
+                            providerId: (profile as any)?.sub,
                             role: "support",
                             isActive: true,
                             lastLogin: new Date(),
@@ -124,54 +102,54 @@ const options = {
                         existingUser.lastLogin = new Date();
                         if (!existingUser.provider || existingUser.provider === "credentials") {
                             existingUser.provider = "google";
-                            existingUser.providerId = profile?.sub;
+                            existingUser.providerId = (profile as any)?.sub;
                         }
-                        if (!existingUser.image && profile?.picture) {
-                            existingUser.image = profile.picture;
+                        if (!existingUser.image && (profile as any)?.picture) {
+                            existingUser.image = (profile as any).picture;
                         }
                         await existingUser.save();
                     }
 
-                    user.id = existingUser._id.toString();
-                    user.role = existingUser.role;
+                    // Extend user object
+                    (user as any).id = existingUser._id.toString();
+                    (user as any).role = existingUser.role;
 
                     return true;
                 } catch (error) {
                     console.error("Google sign-in error:", error);
                     return false;
+                } finally {
+                    await dbClient.close();
                 }
             }
             return true;
         },
 
-        async jwt({ token, user }) {
+        async jwt({token, user}: {
+            token: JWT;
+            user: User;
+        }) {
             if (user) {
-                token.id = user.id;
-                token.role = user.role || "support";
-                token.email = user.email;
+                // Fix 2: Add check for user.id and provide fallback
+                token.id = user.id || "";
+                token.role = (user as any).role || "support";
+                token.email = user.email || "";
             }
             return token;
         },
 
-        async session({ session, token }) {
+        async session({session, token}: {
+            session: any;
+            token: JWT;
+        }) {
             if (token && session.user) {
                 session.user.id = token.id as string;
-                session.user.role = token.role as string;
+                session.user.role = token.role;
                 session.user.email = token.email as string;
             }
             return session;
         },
-    },
-    events: {
-        async signIn({ user, isNewUser }) {
-            console.log(`✅ User signed in: ${user.email}, New user: ${isNewUser}`);
-        },
-        async signOut({ token }) {
-            console.log(`👋 User signed out: ${token?.email}`);
-        },
-    },
-    // Add debug mode in development
-    debug: process.env.NODE_ENV === 'development',
+    }
 };
 
 export default options;

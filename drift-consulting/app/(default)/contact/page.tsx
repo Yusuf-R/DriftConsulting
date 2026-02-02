@@ -1,3 +1,4 @@
+
 import Contact from '@/components/Entry/Contact/Contact';
 
 export const metadata = {
