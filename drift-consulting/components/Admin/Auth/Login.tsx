@@ -5,23 +5,17 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import {
-    Shield, Lock, Mail, Eye, EyeOff, ArrowRight,
-    Building2, Sparkles, CheckCircle2, AlertCircle
-} from "lucide-react";
-import {adminLoginSchema, type AdminLoginData, type AdminSignupData} from "@/lib/validations";
+import { Shield, Lock, Mail, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import {adminLoginSchema, type AdminLoginData} from "@/lib/validations";
 import Image from "next/image";
 import {toast} from "sonner";
-import { parseAuthError } from "@/lib/utils/authErrorHandler";
 
 
 export default function AdminLogin() {
-    const searchParams = useSearchParams();
     const router = useRouter();
-    const callbackUrl = searchParams.get("callbackUrl") || "/admin/protected/dashboard";
 
     const [showPassword, setShowPassword] = useState(false);
 
@@ -121,7 +115,7 @@ export default function AdminLogin() {
     return (
         <div className="min-h-screen flex">
             {/* Left Side - Branding */}
-            <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+            <div className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
                 {/* Animated Background */}
                 <div className="absolute inset-0">
                     <div className="absolute inset-0 opacity-10"
@@ -401,6 +395,15 @@ export default function AdminLogin() {
                             Request Access
                         </Link>
                     </p>
+
+                    <div className="mt-4 text-center">
+                        <Link
+                            href="/admin/auth/reset-password"
+                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                            Forgot your password?
+                        </Link>
+                    </div>
                 </motion.div>
             </div>
         </div>

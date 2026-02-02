@@ -51,18 +51,37 @@ const DriftSchema = new Schema<IDrift>(
             type: Boolean,
             default: false,
         },
+        resetPasswordOTP: {
+            type: String,
+            select: false,
+        },
+        resetPasswordOTPExpires: {
+            type: Date,
+            select: false,
+        },
+        resetPasswordAttempts: {
+            type: Number,
+            default: 0,
+            select: false,
+        },
     },
     {
         timestamps: true,
         toJSON: {
             transform: function (doc, ret) {
                 delete ret.password;
+                delete ret.resetPasswordOTP;
+                delete ret.resetPasswordOTPExpires;
+                delete ret.resetPasswordAttempts;
                 return ret;
             },
         },
         toObject: {
             transform: function (doc, ret) {
                 delete ret.password;
+                delete ret.resetPasswordOTP;
+                delete ret.resetPasswordOTPExpires;
+                delete ret.resetPasswordAttempts;
                 return ret;
             },
         },

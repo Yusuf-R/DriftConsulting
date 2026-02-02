@@ -12,6 +12,9 @@ export interface IDrift extends Document {
     provider?: 'credentials' | 'google';
     providerId?: string;
     emailVerified: boolean;
+    resetPasswordOTP?: string;
+    resetPasswordOTPExpires?: Date;
+    resetPasswordAttempts?: number;
     isActive: boolean;
     lastLogin?: Date;
     createdAt: Date;

@@ -3,8 +3,9 @@ import bcrypt from "bcryptjs";
 import dbClient from "@/lib/mongoDB/index";
 import Drift from "@/lib/models/Drift/Drift";
 import Contact from "@/lib/models/Contact";
-import { signUpCredential, loginCredential, CreateContactData, GetContactsQuery } from "@/lib/types";
-import { getMockContacts } from "@/lib/data/mockProjectsContactsData";
+import {CreateContactData, GetContactsQuery, loginCredential, signUpCredential} from "@/lib/types";
+import {getMockContacts} from "@/lib/data/mockProjectsContactsData";
+import {sendOTPEmail} from "@/lib/email";
 
 class AuthController {
 
@@ -331,6 +332,115 @@ class AuthController {
         } catch (error: any) {
             console.error("Delete contact error:", error);
             throw error;
+        }
+    }
+
+    /**
+     * Generate and send OTP for password reset
+     */
+    static async requestPasswordReset(email: string) {
+        try {
+            await dbClient.connect();
+
+            const user = await Drift.findOne({ email: email.toLowerCase() })
+                .select('+resetPasswordOTP +resetPasswordOTPExpires +resetPasswordAttempts');
+
+            if (!user) {
+                // Don't reveal if email exists for security
+                throw new Error("If this email exists, an OTP has been sent.");
+            }
+
+            if (user.provider === 'google') {
+                throw new Error("This account uses Google sign-in. Please use Google to reset your password.");
+            }
+
+            // Generate 6-digit OTP
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+            // Hash OTP before storing
+            const hashedOTP = await AuthController.hashPassword(otp);
+
+            // Set OTP expiry (3 minutes)
+            const otpExpires = new Date(Date.now() + 3 * 60 * 1000);
+
+            user.resetPasswordOTP = hashedOTP;
+            user.resetPasswordOTPExpires = otpExpires;
+            user.resetPasswordAttempts = 0; // Reset attempts
+            await user.save();
+
+            // Send OTP via email
+            const { success } = await sendOTPEmail(user.email, otp, user.name);
+
+            if (!success) {
+                throw new Error("Failed to send OTP email. Please try again.");
+            }
+
+            return {
+                success: true,
+                message: "OTP sent to your email",
+                expiresAt: otpExpires,
+            };
+        } catch (error: any) {
+            console.error("Request password reset error:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Verify OTP and reset password
+     */
+    static async resetPassword(email: string, otp: string, newPassword: string) {
+        try {
+            await dbClient.connect();
+
+            const user = await Drift.findOne({ email: email.toLowerCase() })
+                .select('+password +resetPasswordOTP +resetPasswordOTPExpires +resetPasswordAttempts');
+
+            if (!user) {
+                throw new Error("Invalid reset request");
+            }
+
+            if (!user.resetPasswordOTP || !user.resetPasswordOTPExpires) {
+                throw new Error("No active OTP request. Please request a new OTP.");
+            }
+
+            // Check if OTP expired
+            if (new Date() > user.resetPasswordOTPExpires) {
+                throw new Error("OTP has expired. Please request a new one.");
+            }
+
+            // Check attempts (max 5)
+            if (user.resetPasswordAttempts >= 5) {
+                throw new Error("Too many failed attempts. Please request a new OTP.");
+            }
+
+            // Verify OTP
+            const isValidOTP = await AuthController.comparePassword(otp, user.resetPasswordOTP);
+
+            if (!isValidOTP) {
+                user.resetPasswordAttempts = (user.resetPasswordAttempts || 0) + 1;
+                await user.save();
+
+                const remaining = 5 - user.resetPasswordAttempts;
+                throw new Error(`Invalid OTP. ${remaining} attempts remaining.`);
+            }
+
+            // OTP is valid - reset password
+            user.password = await AuthController.hashPassword(newPassword);
+            user.resetPasswordOTP = undefined;
+            user.resetPasswordOTPExpires = undefined;
+            user.resetPasswordAttempts = 0;
+            await user.save();
+
+            return {
+                success: true,
+                message: "Password reset successfully",
+            };
+        } catch (error: any) {
+            console.error("Reset password error:", error);
+            throw error;
+        } finally {
+            await dbClient.close();
         }
     }
 }
