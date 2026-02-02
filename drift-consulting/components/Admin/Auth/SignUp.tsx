@@ -54,7 +54,7 @@ export default function AdminSignup() {
             toast.loading("Creating your account...", { id: "signup" });
 
             // Step 1: Create account via API
-            const signupResponse = await fetch(`${baseUrl}/api/v1/auth/signup`, {
+            const signupResponse = await fetch(`${baseUrl}/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

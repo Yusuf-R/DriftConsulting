@@ -51,7 +51,7 @@ class AuthController {
             }
 
             // Hash password
-            const hashedPassword = await this.hashPassword(password);
+            const hashedPassword = await AuthController.hashPassword(password);
 
             // Create new user
             const newUser = await Drift.create({

@@ -39,7 +39,7 @@ export default function AdminLogin() {
             toast.loading("Logging into your account...", { id: "login" });
 
             // Step 1: Validate credentials and check rate limits via API
-            const checkResponse = await fetch(`${baseUrl}/api/v1/auth/login`, {
+            const checkResponse = await fetch(`${baseUrl}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
