@@ -4,7 +4,7 @@ import React, {useState} from 'react';
 import {motion} from 'framer-motion';
 import {
     Building2, Award, Users, CheckCircle2, ArrowRight, TrendingUp, Shield, Target, Clock, Star, Quote,
-    ChevronLeft, ChevronRight, Zap, FileCheck, Globe, BarChart, ShieldCheck, DollarSign,Lock, AlertCircle,
+    ChevronLeft, ChevronRight, Zap, FileCheck, Globe, BarChart, ShieldCheck, DollarSign, Lock, AlertCircle,
     Sparkles, GraduationCap, Trees, Warehouse, Gem, LineChart, Lightbulb, Gauge,
 } from 'lucide-react';
 import {Button} from '@/components/ui/button';
@@ -629,11 +629,41 @@ const ServicesSection = () => {
             title: "Commercial & Industrial",
             description: "Execute complex logistics hubs, warehouses, and commercial centers with precision timing.",
             color: "from-indigo-500 to-blue-500"
+        },
+        {
+            icon: <ShieldCheck className="w-8 h-8" />,
+            title: "Hospital Facilities",
+            description: "Build in line with H&S&E regulatory compliance meeting ISO9001, HTM, HBN National Approved Code of Practice.",
+            color: "from-red-500 to-pink-500"
+        },
+        {
+            icon: <Globe className="w-8 h-8" />,
+            title: "Water & Wastewater Infrastructure",
+            description: "Comprehensive infrastructural development, management, and operations in AMP, WRMP & DWMP areas.",
+            color: "from-cyan-500 to-blue-500"
+        },
+        {
+            icon: <Target className="w-8 h-8" />,
+            title: "Highway Design & Construction",
+            description: "X-Sectioning, longitudinal planning, asphaltic roads, hard pavement, and bitumen layouts with precision.",
+            color: "from-slate-500 to-gray-500"
+        },
+        {
+            icon: <Zap className="w-8 h-8" />,
+            title: "Telecommunications Rollout",
+            description: "RF, LoS MW planning, DDF simulation, solar power integration, electro-mechanical works, and Power-wizard systems.",
+            color: "from-yellow-500 to-amber-500"
+        },
+        {
+            icon: <Star className="w-8 h-8" />,
+            title: "Entertainment & Hospitality Support",
+            description: "Professional catering and management services for entertainment venues and hospitality facilities.",
+            color: "from-rose-500 to-red-500"
         }
     ];
 
     return (
-        <section className="py-20 bg-gradient-to-br from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden relative">
+        <section className="py-20 bg-linear-to-br from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden relative">
             {/* Animated Background Pattern */}
             <div className="absolute inset-0 opacity-5 dark:opacity-10">
                 <div className="absolute top-0 left-0 w-full h-full"
